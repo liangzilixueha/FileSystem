@@ -13,7 +13,7 @@ struct direct
     struct FCB
     {
         char name[9];
-        char property; // 0æ˜¯æ–‡ä»¶ 1ç›®å½•
+        char property; // 0æ˜?æ–‡ä»¶ 1ç›?å½?
         int size;
         int firstdisk;
         int next;
@@ -42,7 +42,7 @@ int diskNum = totleDiskSize / diskSize;         //????????
 int fatSize = diskNum * sizeof(struct fatitem); //???fat??ï¿½ï¿½
 int rootSize = sizeof(struct direct);           //???????ï¿½ï¿½
 int rootNum = fatSize / diskSize + 1;           // fatSize / diskSize + 1;?????????????
-int maxDirNum = 5;                              //??????????5????ï¿½ï¿½???
+int maxDirNum = 5;                              //×î´óÎÄ¼şÊıÄ¿
 
 //?????????
 char path[100];
@@ -55,6 +55,7 @@ struct direct *cur_dir; //?????
 struct fatitem *fat;
 //???????
 struct opentable u_opentable;
+int fd = -1;
 
 void Startup();
 int createDir(char *name);
@@ -352,7 +353,7 @@ int createFile(char *name)
 {
     printf("??????????\n");
     /*
-    ?ï¿½ï¿½??????????????????
+    Ò»¶ÑµÄÏŞÖÆÌõ¼ş
     */
     int i, j;
     //??????
@@ -400,7 +401,7 @@ int createFile(char *name)
 
     //******************//
     //????????ï¿½ï¿½??
-    // fd=open(name);
+    fd = open(name);
     return 0;
 }
 void showDir()
@@ -544,8 +545,14 @@ int removeDir(char *name)
 
 int open(char *name)
 {
+    //Ö»ÄÜ´ò¿ª5¸öÎÄ¼ş
+    if (u_opentable.cur_size >= maxDirNum)
+    {
+        printf("ÒÑ¾­´ò¿ªÁË5¸öÁË£¡\n");
+        return 1;
+    }
     int i;
-    //????open?????
+    //ÎÄ¼ş´æÔÚÂğ£¿
     for (int i = 2; i < maxDirNum + 2; i++)
     {
         if (!strcmp(cur_dir->directitem[i].name, name))
@@ -553,16 +560,37 @@ int open(char *name)
     }
     if (i >= maxDirNum + 2)
     {
-        printf("????\n");
+        printf("Ã»ÓĞÕÒµ½Õâ¸öÎÄ¼ş\n");
         return -1;
     }
-    //?????????????????
+    //ÊÇ²»ÊÇÄ¿Â¼°¡
     if (cur_dir->directitem[i].property == '1')
     {
-        printf("????????????cd\n");
+        printf("Ö»ÄÜopenÎÄ¼ş\n");
         return -2;
     }
-    //
+    //ÎÄ¼şÊÇ·ñ´ò¿ª
+    int j = 0;
+    for (j = 0; j < maxDirNum; j++)
+    {
+        if (!strcmp(u_opentable.openitem[j].name, name))
+        {
+            printf("ÎÄ¼şÒÑ¾­´ò¿ª\n");
+            return -3;
+        }
+    }
+    //²éÕÒ´ò¿ª±í
+    for (j = 0; j < maxDirNum; j++)
+    {
+        if (u_opentable.openitem[j].firstdisk == -1)
+            break;
+    }
+    //Ğ´±í
+    u_opentable.openitem[j].firstdisk = cur_dir->directitem[i].firstdisk;
+    strcpy(u_opentable.openitem[j].name, name);
+    u_opentable.openitem[j].size = cur_dir->directitem[i].size;
+    ++u_opentable.cur_size;
+    return j;
 }
 int write(char *name)
 {
