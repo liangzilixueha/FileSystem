@@ -450,7 +450,7 @@ int createFile(char *name)
 
     //******************//
     //????????锟斤拷??
-    fd = open(name);
+    // fd = open(name);
     return 0;
 }
 void showDir()
@@ -668,9 +668,78 @@ int close(char *name)
 }
 int write(char *name)
 {
+    int i;
+    for (i = 2; i < maxDirNum + 2; i++)
+    {
+        if (!strcmp(cur_dir->directitem[i].name, name))
+            break;
+    }
+    if (i >= maxDirNum + 2)
+    {
+        printf("没有找到这个文件,来自write\n");
+        return -1;
+    }
+    if (cur_dir->directitem[i].property != '0')
+    {
+        printf("只能write文件\n");
+        return -2;
+    }
+    //****************************************//
+    char neirong[100];
+    printf("请输入要写入的内容：\n");
+    scanf("%s", neirong);
+    //****************************************//
+    int flag = open(name);
+    //打开表的盘块号
+    int item = u_opentable.openitem[flag].firstdisk;
+
+    // while (fat[item].item != -1)
+    // {
+    //     item = fat[item].item; /*-查找该文件的下一盘块--*/
+    // }
+
+    char *first = fdisk +
+                  item * diskSize +
+                  u_opentable.openitem[flag].size % diskSize;
+    strcpy(first, neirong);
+    u_opentable.openitem[flag].size = u_opentable.openitem[flag].size + strlen(neirong);
+    cur_dir->directitem[i].size = cur_dir->directitem[i].size + strlen(neirong);
+    /*
+    没有写如果磁盘块不够的情况
+    */
+    close(name);
+    return 0;
 }
 int read(char *name)
 {
+    int i;
+    for (i = 2; i < maxDirNum + 2; i++)
+    {
+        if (!strcmp(cur_dir->directitem[i].name, name))
+            break;
+    }
+    if (i >= maxDirNum + 2)
+    {
+        printf("没有找到这个文件,来自read\n");
+        return -1;
+    }
+    if (cur_dir->directitem[i].property != '0')
+    {
+        printf("只能read文件\n");
+        return -2;
+    }
+    if (cur_dir->directitem[i].size == 0)
+    {
+        printf("null\n");
+        return 0;
+    }
+    char *first = fdisk + cur_dir->directitem[i].firstdisk * diskSize;
+
+    for (int j = 0; j < cur_dir->directitem[i].size; j++)
+    {
+        printf("%c\n", first[j]);
+    }
+    return 0;
 }
 int del(char *name)
 {
@@ -685,7 +754,7 @@ int del(char *name)
     temp = i;
     if (i >= maxDirNum + 2)
         return -1; //没找到
-    if (cur_dir->directitem[i].property !='0')
+    if (cur_dir->directitem[i].property != '0')
         return -2; //不能删除目录
     for (int j = 0; j < maxDirNum; j++)
     {
