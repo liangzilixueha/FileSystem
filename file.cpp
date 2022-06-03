@@ -70,6 +70,8 @@ int read(char *name);
 int write(char *name);
 int del(char *name);
 
+void exit();
+
 int main()
 {
     char command[10];
@@ -79,9 +81,7 @@ int main()
     {
         printf("%s", path);
         scanf("%s", command);
-        if (!strcmp(command, "exit"))
-            break;
-        else if (!strcmp(command, "mkdir"))
+        if (!strcmp(command, "mkdir"))
         {
             //??????
             scanf("%s", command);
@@ -218,6 +218,16 @@ int main()
                        cur_dir->directitem[i].name,
                        cur_dir->directitem[i].property);
             }
+        }
+        else if (!strcmp(command, "exit"))
+        {
+            exit();
+            printf("退出程序\n");
+            break;
+        }
+        else
+        {
+            printf("输入错误\n");
         }
     }
     getc(stdin);
@@ -778,4 +788,25 @@ int del(char *name)
     cur_dir->directitem[temp].property = '0';
     cur_dir->directitem[temp].size = 0;
     return 0;
+}
+void exit()
+{
+    FILE *fp;
+    int i;
+
+    if ((fp = fopen("date", "wb")) == NULL)
+    {
+        printf("Error:\nCannot open file\n");
+        return;
+    }
+    if (!fwrite(fdisk, totleDiskSize, 1, fp)) /*把虚拟磁盘空间(内存)内容读入磁盘文件disk.dat */
+    {
+        printf("Error:\nFile write error!\n");
+    }
+    fclose(fp);
+
+    free(fdisk);
+    free(path);
+    scanf("%d", &i);
+    return;
 }
