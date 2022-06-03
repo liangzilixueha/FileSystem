@@ -13,7 +13,7 @@ struct direct
     struct FCB
     {
         char name[9];
-        char property; // 0鏄?鏂囦欢 1鐩?褰?
+        char property; // 0文件 1目录
         int size;
         int firstdisk;
         int next;
@@ -65,8 +65,10 @@ int cd(char *name);
 int removeDir(char *name);
 
 int open(char *name);
+int close(char *name);
 int read(char *name);
 int write(char *name);
+int del(char *name);
 
 int main()
 {
@@ -169,6 +171,53 @@ int main()
         {
             scanf("%s", command);
             int code = read(command);
+        }
+        else if (!strcmp(command, "close"))
+        {
+            scanf("%s", command);
+            int code = close(command);
+            switch (code)
+            {
+            case 0:
+                printf("关闭成功\n");
+                break;
+            case -1:
+                printf("找不到该文件\n");
+                break;
+            default:
+                break;
+            }
+        }
+        else if (!strcmp(command, "del"))
+        {
+            scanf("%s", command);
+            int code = del(command);
+            switch (code)
+            {
+            case 0:
+                printf("删除成功\n");
+                break;
+            case -1:
+                printf("没找到啊\n");
+                break;
+            case -2:
+                printf("不能删除目录啊\n");
+                break;
+            case -3:
+                printf("文件打开中，请先关闭文件\n");
+                break;
+            default:
+                break;
+            }
+        }
+        else if (!strcmp(command, "showcur"))
+        {
+            for (int i = 2; i < maxDirNum + 2; i++)
+            {
+                printf("name:%s,属性：%c\n",
+                       cur_dir->directitem[i].name,
+                       cur_dir->directitem[i].property);
+            }
         }
     }
     getc(stdin);
@@ -413,11 +462,11 @@ void showDir()
             printf("%s\t", cur_dir->directitem[i].name);
             if (cur_dir->directitem[i].property == '1')
             {
-                printf("<??>\n");
+                printf("<目录>\n");
             }
             else
             {
-                printf("<???>\n");
+                printf("<文件>\n");
             }
         }
     }
@@ -545,6 +594,7 @@ int removeDir(char *name)
 
 int open(char *name)
 {
+    printf("open start\n");
     //只能打开5个文件
     if (u_opentable.cur_size >= maxDirNum)
     {
@@ -553,18 +603,24 @@ int open(char *name)
     }
     int i;
     //文件存在吗？
-    for (int i = 2; i < maxDirNum + 2; i++)
+    for (i = 2; i < maxDirNum + 2; i++)
     {
+        // printf("%s,%s,i:%d,%d\n",
+        //        cur_dir->directitem[i].name,
+        //        name,
+        //        i,
+        //        strcmp(cur_dir->directitem[i].name, name));
         if (!strcmp(cur_dir->directitem[i].name, name))
             break;
     }
     if (i >= maxDirNum + 2)
     {
-        printf("没有找到这个文件\n");
+        // printf("%d,%d", i, maxDirNum + 2);
+        printf("没有找到这个文件,来自open\n");
         return -1;
     }
     //是不是目录啊
-    if (cur_dir->directitem[i].property == '1')
+    if (cur_dir->directitem[i].property != '0')
     {
         printf("只能open文件\n");
         return -2;
@@ -592,9 +648,65 @@ int open(char *name)
     ++u_opentable.cur_size;
     return j;
 }
+int close(char *name)
+{
+    int i = 0;
+    for (i = 0; i < maxDirNum; i++)
+    {
+        if (!strcmp(u_opentable.openitem[i].name, name))
+            break;
+    }
+    //没有这个文件打开错了
+    if (i >= maxDirNum)
+        return -1;
+    //开始释放
+    strcpy(u_opentable.openitem[i].name, "");
+    u_opentable.openitem[i].firstdisk = -1;
+    u_opentable.openitem[i].size = 0;
+    --u_opentable.cur_size;
+    return 0;
+}
 int write(char *name)
 {
 }
 int read(char *name)
 {
+}
+int del(char *name)
+{
+    int i = 0;
+    int temp, item;
+    //找一找删除的**文件**是否存在
+    for (i = 2; i < maxDirNum + 2; i++)
+    {
+        if (!strcmp(cur_dir->directitem[i].name, name))
+            break;
+    }
+    temp = i;
+    if (i >= maxDirNum + 2)
+        return -1; //没找到
+    if (cur_dir->directitem[i].property !='0')
+        return -2; //不能删除目录
+    for (int j = 0; j < maxDirNum; j++)
+    {
+        if (!strcmp(u_opentable.openitem[j].name, name))
+            return -3; //已经被打开了
+    }
+    item = cur_dir->directitem[temp].firstdisk;
+    while (item != -1)
+    {
+        int k = fat[item].item;
+        fat[item].item = -1;
+        fat[item].em_disk = '0';
+        item = k;
+    }
+    //开始释放
+    cur_dir->directitem[temp].sign = 0;
+    cur_dir->directitem[temp].firstdisk = -1;
+    // strcpy(u_opentable.openitem[temp].name, "");
+    strcpy(cur_dir->directitem[temp].name, "");
+    cur_dir->directitem[temp].next = -1;
+    cur_dir->directitem[temp].property = '0';
+    cur_dir->directitem[temp].size = 0;
+    return 0;
 }

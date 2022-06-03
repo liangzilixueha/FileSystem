@@ -301,7 +301,6 @@ int close(char *name)
     u_opentable.openitem[i].firstdisk = -1;
     u_opentable.openitem[i].size = 0;
     u_opentable.cur_size--;
-
     return 0;
 }
 
@@ -462,6 +461,7 @@ int del(char *name)
     cur_dir->directitem[cur_item].sign = 0;
     cur_dir->directitem[cur_item].firstdisk = -1;
     strcpy(u_opentable.openitem[cur_item].name, "");
+    strcpy(cur_dir->directitem[cur_item].name,"");
     cur_dir->directitem[cur_item].next = -1;
     cur_dir->directitem[cur_item].property = '0';
     cur_dir->directitem[cur_item].size = 0;
