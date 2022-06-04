@@ -696,10 +696,16 @@ int write(char *name)
     }
     //****************************************//
     char neirong[100];
+PLAESEWRITE:
     printf("请输入要写入的内容：\n");
     scanf("%s", neirong);
     //****************************************//
     int flag = open(name);
+    if(!strcmp(neirong,"exit"))
+    {
+        printf("退出写入\n");
+        return 0;
+    }
     //打开表的盘块号
     int item = u_opentable.openitem[flag].firstdisk;
 
@@ -707,10 +713,28 @@ int write(char *name)
     // {
     //     item = fat[item].item; /*-查找该文件的下一盘块--*/
     // }
-
     char *first = fdisk +
                   item * diskSize +
                   u_opentable.openitem[flag].size % diskSize;
+    if (!strcmp(neirong, "del") && u_opentable.openitem[flag].size == 0)
+    {
+        printf("没有东西给你删除了\n");
+        goto PLAESEWRITE;
+    }
+    while (!strcmp(neirong, "del"))
+    {
+        printf("删除了一个字符\n");
+        first = first - sizeof(char);
+        --u_opentable.openitem[flag].size;
+        --cur_dir->directitem[i].size;
+        if (u_opentable.openitem[flag].size == 0)
+        {
+            printf("删除完了，不能继续删除，\n");
+            goto PLAESEWRITE;
+        }
+        scanf("%s", neirong);
+    }
+
     strcpy(first, neirong);
     u_opentable.openitem[flag].size = u_opentable.openitem[flag].size + strlen(neirong);
     cur_dir->directitem[i].size = cur_dir->directitem[i].size + strlen(neirong);
@@ -747,8 +771,9 @@ int read(char *name)
 
     for (int j = 0; j < cur_dir->directitem[i].size; j++)
     {
-        printf("%c\n", first[j]);
+        printf("%c", first[j]);
     }
+    printf("\n");
     return 0;
 }
 int del(char *name)
@@ -807,6 +832,5 @@ void exit()
 
     free(fdisk);
     free(path);
-    scanf("%d", &i);
     return;
 }
