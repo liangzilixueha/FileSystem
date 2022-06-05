@@ -44,8 +44,11 @@ int rootSize = sizeof(struct direct);           //???????锟斤拷
 int rootNum = fatSize / diskSize + 1;           // fatSize / diskSize + 1;?????????????
 int maxDirNum = 5;                              //最大文件数目
 
-//?????????
+//显示目录
 char path[100];
+//寻找目录 最多十条
+char searchpath[10][100];
+int searchpath_num = 0;
 //??????????
 char *fdisk;
 //????
@@ -55,7 +58,6 @@ struct direct *cur_dir; //?????
 struct fatitem *fat;
 //???????
 struct opentable u_opentable;
-int fd = -1;
 
 void Startup();
 int createDir(char *name);
@@ -69,6 +71,8 @@ int close(char *name);
 int read(char *name);
 int write(char *name);
 int del(char *name);
+int search(char *name);
+void search(direct *, char *);
 
 void exit();
 
@@ -212,7 +216,7 @@ int main()
         }
         else if (!strcmp(command, "showcur"))
         {
-            for (int i = 2; i < maxDirNum + 2; i++)
+            for (int i = 0; i < maxDirNum + 2; i++)
             {
                 printf("name:%s,属性：%c\n",
                        cur_dir->directitem[i].name,
@@ -224,6 +228,11 @@ int main()
             exit();
             printf("退出程序\n");
             break;
+        }
+        else if (!strcmp(command, "search"))
+        {
+            scanf("%s", command);
+            int code = search(command);
         }
         else
         {
@@ -262,7 +271,7 @@ void Startup()
         //??????
         root->directitem[0].sign = 1;
         root->directitem[0].firstdisk = rootNum;
-        strcpy(root->directitem[0].name, ".");
+        strcpy(root->directitem[0].name, "Root");
         root->directitem[0].next = root->directitem[0].firstdisk;
         root->directitem[0].property = '1'; //??????
 
@@ -385,7 +394,7 @@ int createDir(char *name)
 
     temp->directitem[0].sign = 0;
     temp->directitem[0].firstdisk = cur_dir->directitem[i].firstdisk;
-    strcpy(temp->directitem[0].name, ".");
+    strcpy(temp->directitem[0].name, name);
     temp->directitem[0].next = temp->directitem[0].firstdisk;
     temp->directitem[0].property = '1';
     temp->directitem[0].size = rootSize;
@@ -483,7 +492,7 @@ void showDir()
 }
 int cd(char *name)
 {
-    //????????cd \???????Root
+    // cd "\"
     if (!strcmp("\\", name))
     {
         cur_dir = root;
@@ -493,7 +502,7 @@ int cd(char *name)
 
     struct direct *temp = cur_dir;
     int j;
-    for (j = 0; j < 7; j++)
+    for (j = 1; j < 7; j++)
     {
         if (!strcmp(temp->directitem[j].name, name))
             break;
@@ -502,14 +511,14 @@ int cd(char *name)
 
     if (j >= 7)
     {
-        printf("????????\n");
+        printf("没有这个文件\n");
         return -1;
     }
-    //????????
+    //如果有这个文件
     if (temp->directitem[j].property == '1')
     {
         temp = (struct direct *)(fdisk + item * diskSize);
-        // cd .. ??锟斤拷????????
+        // cd ..
         if (!strcmp("..", name))
         {
 
@@ -527,12 +536,10 @@ int cd(char *name)
                         count++;
                 }
                 char point[100];
-                //?????锟斤拷?ponint????'\0'
                 for (int i = 0; i < 100; i++)
                 {
                     point[i] = '\0';
                 }
-                //??path?锟斤拷????????????point??
                 for (int i = 0; i < strlen(path); i++)
                 {
                     if (count == 1)
@@ -541,7 +548,6 @@ int cd(char *name)
                         --count;
                     point[i] = path[i];
                 }
-                //??point?锟斤拷????????????path??
                 strcpy(path, point);
             }
         }
@@ -701,7 +707,7 @@ PLAESEWRITE:
     scanf("%s", neirong);
     //****************************************//
     int flag = open(name);
-    if(!strcmp(neirong,"exit"))
+    if (!strcmp(neirong, "exit"))
     {
         printf("退出写入\n");
         return 0;
@@ -814,6 +820,77 @@ int del(char *name)
     cur_dir->directitem[temp].size = 0;
     return 0;
 }
+int search(char *name)
+{
+    searchpath_num = 0;
+    struct direct *p = root;
+    search(p, name);
+    if (searchpath_num == 0)
+    {
+        printf("没有找到这个文件\n");
+        return -1;
+    }
+    printf("找到了%d个文件\n", searchpath_num);
+    for (int i = 0; i < searchpath_num; i++)
+    {
+        printf("%s\n", searchpath[i]);
+    }
+    return 0;
+}
+void search(struct direct *p, char *name)
+{
+    for (int i = 2; i < 7; i++)
+    {
+        //是目录，而且名字匹配，可是得继续找下去
+        if (!strcmp(p->directitem[i].name, name) && p->directitem[i].property == '1')
+        {
+            struct direct *temp = p;
+            strcpy(searchpath[searchpath_num], temp->directitem[i].name);
+            strcat(searchpath[searchpath_num], "<");
+            while (strcmp(temp->directitem[0].name, "Root"))
+            {
+                strcat(searchpath[searchpath_num], "<");
+                strcat(searchpath[searchpath_num], temp->directitem[0].name);
+                temp = (struct direct *)(fdisk + temp->directitem[1].firstdisk * diskSize);
+            }
+            strcat(searchpath[searchpath_num], "<");
+            strcat(searchpath[searchpath_num], "Root");
+            ++searchpath_num;
+            search((struct direct *)(fdisk + p->directitem[i].firstdisk * diskSize), name);
+        }
+    }
+    for (int i = 2; i < 7; i++)
+    {
+        //空的磁盘，跳过
+        // if (p->directitem[i].name[0] == '.')
+        // {
+        //     continue;
+        // }
+
+        //找到了，但是是文件
+        if (!strcmp(p->directitem[i].name, name) && p->directitem[i].property == '0')
+        {
+            struct direct *temp = p;
+            strcpy(searchpath[searchpath_num], temp->directitem[i].name);
+            strcat(searchpath[searchpath_num], "<");
+            while (strcmp(temp->directitem[0].name, "Root"))
+            {
+                strcat(searchpath[searchpath_num], "<");
+                strcat(searchpath[searchpath_num], temp->directitem[0].name);
+                temp = (struct direct *)(fdisk + temp->directitem[1].firstdisk * diskSize);
+            }
+            strcat(searchpath[searchpath_num], "<");
+            strcat(searchpath[searchpath_num], "Root");
+            ++searchpath_num;
+        }
+        //是目录,但是名字不匹配
+        if (p->directitem[i].property == '1' && strcmp(p->directitem[i].name, name))
+        {
+            search((struct direct *)(fdisk + p->directitem[i].firstdisk * diskSize), name);
+        }
+    }
+}
+
 void exit()
 {
     FILE *fp;
