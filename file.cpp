@@ -1,3 +1,4 @@
+ï»¿#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,15 +14,14 @@ struct direct
     struct FCB
     {
         char name[9];
-        char property; // 0ÎÄ¼ş 1Ä¿Â¼
+        char property; //0æ˜¯æ–‡ä»¶1æ˜¯ç›®å½•
         int size;
         int firstdisk;
         int next;
-        int sign; // 1?????
+        int sign; // 1æ˜¯æ ¹ç›®å½•
 
     } directitem[7];
-    // 7??FCB,??????????????????????????????????
-    // ???????????????
+    
 };
 
 struct opentable
@@ -35,18 +35,23 @@ struct opentable
     //?????????
     int cur_size;
 };
-
+struct trash
+{
+    struct direct dir;//èƒ½å›æ”¶7ä¸ªæ–‡ä»¶æˆ–ç›®å½•
+    char nameDir[7][100];//å›æ”¶çš„è·¯å¾„å
+    char blank[7];//è¯¥å›æ”¶ä½ç½®æ˜¯å¦è¢«å ç”¨
+};
 int totleDiskSize = 1024 * 1024;                //??????ï¿½ï¿½
 int diskSize = 1024;                            //????????ï¿½ï¿½
 int diskNum = totleDiskSize / diskSize;         //????????
 int fatSize = diskNum * sizeof(struct fatitem); //???fat??ï¿½ï¿½
 int rootSize = sizeof(struct direct);           //???????ï¿½ï¿½
 int rootNum = fatSize / diskSize + 1;           // fatSize / diskSize + 1;?????????????
-int maxDirNum = 5;                              //×î´óÎÄ¼şÊıÄ¿
+int maxDirNum = 5;                              //ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ä¿
 
-//ÏÔÊ¾Ä¿Â¼
+//ï¿½ï¿½Ê¾Ä¿Â¼
 char path[100];
-//Ñ°ÕÒÄ¿Â¼ ×î¶àÊ®Ìõ
+//Ñ°ï¿½ï¿½Ä¿Â¼ ï¿½ï¿½ï¿½Ê®ï¿½ï¿½
 char searchpath[10][100];
 int searchpath_num = 0;
 //??????????
@@ -58,6 +63,10 @@ struct direct *cur_dir; //?????
 struct fatitem *fat;
 //???????
 struct opentable u_opentable;
+struct direct *Trash=(struct direct*)malloc(sizeof(direct));//ï¿½ï¿½ï¿½ï¿½Õ¾ 
+char nameDir[7][100];
+int blank[7];
+//struct trash *Trash;
 
 void Startup();
 int createDir(char *name);
@@ -73,7 +82,8 @@ int write(char *name);
 int del(char *name);
 int search(char *name);
 void search(direct *, char *);
-
+void showTrash();
+int recover(char *name);
 void exit();
 
 int main()
@@ -91,13 +101,13 @@ int main()
             scanf("%s", command);
             int code = createDir(command);
             if (code == 0)
-                printf("?????????\n");
+                printf("ç›®å½•åˆ›å»ºæˆåŠŸ\n");
             else if (code == -1)
-                printf("???????\n");
+                printf("ç›®å½•å·²å­˜åœ¨\n");
             else if (code == -2)
-                printf("???5???????????\n");
+                printf("æœ€å¤šåªèƒ½æœ‰5ä¸ªæ–‡ä»¶\n");
             else if (code == -3)
-                printf("????????\n");
+                printf("ç£ç›˜ç©ºé—´æ»¡äº†\n");
         }
         else if (!strcmp(command, "create"))
         {
@@ -105,15 +115,15 @@ int main()
             scanf("%s", command);
             int code = createFile(command);
             if (code == 0)
-                printf("??????????\n");
+                printf("æ–‡ä»¶åˆ›å»ºæˆåŠŸ\n");
             else if (code == -1)
-                printf("???????\n");
+                printf("æ–‡ä»¶å·²ç»å­˜åœ¨\n");
             else if (code == -2)
-                printf("???5?????????\n");
+                printf("æœ€å¤šåªèƒ½æœ‰5ä¸ªæ–‡ä»¶\n");
             else if (code == -3)
-                printf("??????????\n");
+                printf("æ‰“å¼€çš„æ–‡ä»¶æœ€å¤šä¸º5ä¸ª\n");
             else if (code == -4)
-                printf("????????\n");
+                printf("ç£ç›˜ç©ºé—´å·²ç»æ»¡äº†\n");
         }
         else if (!strcmp(command, "dir"))
         {
@@ -126,13 +136,13 @@ int main()
             switch (code)
             {
             case 0:
-                printf("??????????????????\n");
+                printf("è¿›å…¥ç›®å½•æˆåŠŸ\n");
                 break;
             case -1:
-                printf("????????\n");
+                printf("æ²¡æœ‰è¯¥ç›®å½•\n");
                 break;
             case -2:
-                printf("??????????\n");
+                printf("åªèƒ½è¿›å…¥ç›®å½•\n");
                 break;
             default:
                 break;
@@ -145,16 +155,16 @@ int main()
             switch (code)
             {
             case 0:
-                printf("??????\n");
+                printf("ç›®å½•åˆ é™¤æˆåŠŸ\n");
                 break;
             case -1:
-                printf("????????\n");
+                printf("æ²¡æœ‰è¯¥ç›®å½•\n");
                 break;
             case -2:
-                printf("???????????\n");
+                printf("åˆ é™¤çš„ä¸æ˜¯ç›®å½•\n");
                 break;
             case -3:
-                printf("???????ï¿½ï¿½???\n");
+                printf("ç›®å½•è·¯å¾„é‡Œæœ‰æ–‡ä»¶\n");
                 break;
 
             default:
@@ -183,10 +193,10 @@ int main()
             switch (code)
             {
             case 0:
-                printf("¹Ø±Õ³É¹¦\n");
+                printf("ï¿½Ø±Õ³É¹ï¿½\n");
                 break;
             case -1:
-                printf("ÕÒ²»µ½¸ÃÎÄ¼ş\n");
+                printf("ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½\n");
                 break;
             default:
                 break;
@@ -199,16 +209,16 @@ int main()
             switch (code)
             {
             case 0:
-                printf("É¾³ı³É¹¦\n");
+                printf("æ–‡ä»¶åˆ é™¤æˆåŠŸ\n");
                 break;
             case -1:
-                printf("Ã»ÕÒµ½°¡\n");
+                printf("æ²¡æœ‰è¯¥æ–‡ä»¶\n");
                 break;
             case -2:
-                printf("²»ÄÜÉ¾³ıÄ¿Â¼°¡\n");
+                printf("åˆ é™¤çš„ä¸æ˜¯æ–‡ä»¶\n");
                 break;
             case -3:
-                printf("ÎÄ¼ş´ò¿ªÖĞ£¬ÇëÏÈ¹Ø±ÕÎÄ¼ş\n");
+                printf("æ–‡ä»¶å·²ç»æ‰“å¼€\n");
                 break;
             default:
                 break;
@@ -218,7 +228,7 @@ int main()
         {
             for (int i = 0; i < maxDirNum + 2; i++)
             {
-                printf("name:%s,ÊôĞÔ£º%c\n",
+                printf("name:%s,ï¿½ï¿½ï¿½Ô£ï¿½%c\n",
                        cur_dir->directitem[i].name,
                        cur_dir->directitem[i].property);
             }
@@ -226,7 +236,7 @@ int main()
         else if (!strcmp(command, "exit"))
         {
             exit();
-            printf("ÍË³ö³ÌĞò\n");
+            printf("é€€å‡ºæ–‡ä»¶ç³»ç»Ÿ\n");
             break;
         }
         else if (!strcmp(command, "search"))
@@ -234,9 +244,35 @@ int main()
             scanf("%s", command);
             int code = search(command);
         }
+        else if(!strcmp(command,"recover"))
+        {
+        	scanf("%s",command);
+        	int code=recover(command);
+            switch (code)
+            {
+            case -3:
+                printf("æœ‰æ–‡ä»¶é‡å\n");
+                break;
+            case -2:
+                printf("è¯¥ç›®å½•ä¸‹æ–‡ä»¶å·²ç»æ»¡äº†\n");
+                break;
+            case -1:
+                printf("å›æ”¶ç«™é‡Œæ²¡æœ‰è¯¥æ–‡ä»¶\n");
+                break;
+            case 0:
+                printf("æ¢å¤æˆåŠŸ\n");
+                break;
+            default:
+                break;
+            }
+		}
+        else if (!strcmp(command, "showTrash"))
+        {
+            showTrash();
+        }
         else
         {
-            printf("ÊäÈë´íÎó\n");
+            printf("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n");
         }
     }
     getc(stdin);
@@ -282,7 +318,22 @@ void Startup()
         root->directitem[1].next = root->directitem[1].firstdisk;
         root->directitem[1].property = '1'; //??????
         root->directitem[1].size = rootSize;
-
+        
+        //åˆå§‹åŒ–å›æ”¶ç«™
+        Trash = (struct direct*)(fdisk + diskSize*(diskNum-1) + fatSize + 1);
+        for(int i=0;i<7;i++)
+        {
+            Trash->directitem[i].sign = 0;
+            Trash->directitem[i].firstdisk = rootNum;
+            strcpy(Trash->directitem[i].name, "");
+            Trash->directitem[i].next = Trash->directitem->firstdisk;
+            Trash->directitem[i].property = '1';
+            Trash->directitem[i].size = rootSize;
+            strcpy(nameDir[i],"");
+            blank[i]=0;
+        }
+              
+        
         if ((fp = fopen("date", "wb")) == NULL)
         {
             printf("???????????\n");
@@ -421,7 +472,7 @@ int createFile(char *name)
 {
     printf("??????????\n");
     /*
-    Ò»¶ÑµÄÏŞÖÆÌõ¼ş
+    Ò»ï¿½Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     */
     int i, j;
     //??????
@@ -481,11 +532,11 @@ void showDir()
             printf("%s\t", cur_dir->directitem[i].name);
             if (cur_dir->directitem[i].property == '1')
             {
-                printf("<Ä¿Â¼>\n");
+                printf("<ç›®å½•>\n");
             }
             else
             {
-                printf("<ÎÄ¼ş>\n");
+                printf("<æ–‡ä»¶>\n");
             }
         }
     }
@@ -511,10 +562,10 @@ int cd(char *name)
 
     if (j >= 7)
     {
-        printf("Ã»ÓĞÕâ¸öÎÄ¼ş\n");
+        printf("Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½\n");
         return -1;
     }
-    //Èç¹ûÓĞÕâ¸öÎÄ¼ş
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
     if (temp->directitem[j].property == '1')
     {
         temp = (struct direct *)(fdisk + item * diskSize);
@@ -595,7 +646,28 @@ int removeDir(char *name)
         }
     }
     int item = cur_dir->directitem[i].firstdisk;
-
+    
+    //ï¿½ï¿½ï¿½ï¿½Õ¾ï¿½ï¿½ï¿½ï¿½
+    int t;
+    for(t=0;t<7;t++)
+    {
+        if(blank[t]==0)
+        {
+            blank[t]=1;
+            break;
+        }
+    }
+    if(t<7)
+    {Trash->directitem[t].sign = cur_dir->directitem[i].sign;
+    Trash->directitem[t].firstdisk = cur_dir->directitem[i].firstdisk;
+    strcpy(Trash->directitem[t].name, cur_dir->directitem[i].name);
+    Trash->directitem[t].next = cur_dir->directitem[i].next;
+    Trash->directitem[t].property = cur_dir->directitem[i].property;
+    Trash->directitem[t].size = cur_dir->directitem[i].size;
+    strcpy(nameDir[t],path);
+    strcat(nameDir[t], cur_dir->directitem[i].name);
+    }
+	
     fat[item].em_disk = '0';
 
     cur_dir->directitem[i].sign = 0;
@@ -611,14 +683,14 @@ int removeDir(char *name)
 int open(char *name)
 {
     printf("open start\n");
-    //Ö»ÄÜ´ò¿ª5¸öÎÄ¼ş
+    //Ö»ï¿½Ü´ï¿½5ï¿½ï¿½ï¿½Ä¼ï¿½
     if (u_opentable.cur_size >= maxDirNum)
     {
-        printf("ÒÑ¾­´ò¿ªÁË5¸öÁË£¡\n");
+        printf("ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½5ï¿½ï¿½ï¿½Ë£ï¿½\n");
         return 1;
     }
     int i;
-    //ÎÄ¼ş´æÔÚÂğ£¿
+    //ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     for (i = 2; i < maxDirNum + 2; i++)
     {
         // printf("%s,%s,i:%d,%d\n",
@@ -632,32 +704,32 @@ int open(char *name)
     if (i >= maxDirNum + 2)
     {
         // printf("%d,%d", i, maxDirNum + 2);
-        printf("Ã»ÓĞÕÒµ½Õâ¸öÎÄ¼ş,À´×Ôopen\n");
+        printf("Ã»ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½,ï¿½ï¿½ï¿½ï¿½open\n");
         return -1;
     }
-    //ÊÇ²»ÊÇÄ¿Â¼°¡
+    //ï¿½Ç²ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½
     if (cur_dir->directitem[i].property != '0')
     {
-        printf("Ö»ÄÜopenÎÄ¼ş\n");
+        printf("Ö»ï¿½ï¿½openï¿½Ä¼ï¿½\n");
         return -2;
     }
-    //ÎÄ¼şÊÇ·ñ´ò¿ª
+    //ï¿½Ä¼ï¿½ï¿½Ç·ï¿½ï¿½
     int j = 0;
     for (j = 0; j < maxDirNum; j++)
     {
         if (!strcmp(u_opentable.openitem[j].name, name))
         {
-            printf("ÎÄ¼şÒÑ¾­´ò¿ª\n");
+            printf("ï¿½Ä¼ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½\n");
             return -3;
         }
     }
-    //²éÕÒ´ò¿ª±í
+    //ï¿½ï¿½ï¿½Ò´ò¿ª±ï¿½
     for (j = 0; j < maxDirNum; j++)
     {
         if (u_opentable.openitem[j].firstdisk == -1)
             break;
     }
-    //Ğ´±í
+    //Ğ´ï¿½ï¿½
     u_opentable.openitem[j].firstdisk = cur_dir->directitem[i].firstdisk;
     strcpy(u_opentable.openitem[j].name, name);
     u_opentable.openitem[j].size = cur_dir->directitem[i].size;
@@ -672,10 +744,10 @@ int close(char *name)
         if (!strcmp(u_opentable.openitem[i].name, name))
             break;
     }
-    //Ã»ÓĞÕâ¸öÎÄ¼ş´ò¿ª´íÁË
+    //Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ò¿ª´ï¿½ï¿½ï¿½
     if (i >= maxDirNum)
         return -1;
-    //¿ªÊ¼ÊÍ·Å
+    //ï¿½ï¿½Ê¼ï¿½Í·ï¿½
     strcpy(u_opentable.openitem[i].name, "");
     u_opentable.openitem[i].firstdisk = -1;
     u_opentable.openitem[i].size = 0;
@@ -692,50 +764,50 @@ int write(char *name)
     }
     if (i >= maxDirNum + 2)
     {
-        printf("Ã»ÓĞÕÒµ½Õâ¸öÎÄ¼ş,À´×Ôwrite\n");
+        printf("Ã»ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½,ï¿½ï¿½ï¿½ï¿½write\n");
         return -1;
     }
     if (cur_dir->directitem[i].property != '0')
     {
-        printf("Ö»ÄÜwriteÎÄ¼ş\n");
+        printf("Ö»ï¿½ï¿½writeï¿½Ä¼ï¿½\n");
         return -2;
     }
     //****************************************//
     char neirong[100];
 PLAESEWRITE:
-    printf("ÇëÊäÈëÒªĞ´ÈëµÄÄÚÈİ£º\n");
+    printf("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÒªĞ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½\n");
     scanf("%s", neirong);
     //****************************************//
     int flag = open(name);
     if (!strcmp(neirong, "exit"))
     {
-        printf("ÍË³öĞ´Èë\n");
+        printf("ï¿½Ë³ï¿½Ğ´ï¿½ï¿½\n");
         return 0;
     }
-    //´ò¿ª±íµÄÅÌ¿éºÅ
+    //ï¿½ò¿ª±ï¿½ï¿½ï¿½ï¿½Ì¿ï¿½ï¿½
     int item = u_opentable.openitem[flag].firstdisk;
 
     // while (fat[item].item != -1)
     // {
-    //     item = fat[item].item; /*-²éÕÒ¸ÃÎÄ¼şµÄÏÂÒ»ÅÌ¿é--*/
+    //     item = fat[item].item; /*-ï¿½ï¿½ï¿½Ò¸ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Ì¿ï¿½--*/
     // }
     char *first = fdisk +
                   item * diskSize +
                   u_opentable.openitem[flag].size % diskSize;
     if (!strcmp(neirong, "del") && u_opentable.openitem[flag].size == 0)
     {
-        printf("Ã»ÓĞ¶«Î÷¸øÄãÉ¾³ıÁË\n");
+        printf("Ã»ï¿½Ğ¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½\n");
         goto PLAESEWRITE;
     }
     while (!strcmp(neirong, "del"))
     {
-        printf("É¾³ıÁËÒ»¸ö×Ö·û\n");
+        printf("É¾ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö·ï¿½\n");
         first = first - sizeof(char);
         --u_opentable.openitem[flag].size;
         --cur_dir->directitem[i].size;
         if (u_opentable.openitem[flag].size == 0)
         {
-            printf("É¾³ıÍêÁË£¬²»ÄÜ¼ÌĞøÉ¾³ı£¬\n");
+            printf("É¾ï¿½ï¿½ï¿½ï¿½ï¿½Ë£ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½\n");
             goto PLAESEWRITE;
         }
         scanf("%s", neirong);
@@ -745,7 +817,7 @@ PLAESEWRITE:
     u_opentable.openitem[flag].size = u_opentable.openitem[flag].size + strlen(neirong);
     cur_dir->directitem[i].size = cur_dir->directitem[i].size + strlen(neirong);
     /*
-    Ã»ÓĞĞ´Èç¹û´ÅÅÌ¿é²»¹»µÄÇé¿ö
+    Ã»ï¿½ï¿½Ğ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¿é²»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     */
     close(name);
     return 0;
@@ -760,12 +832,12 @@ int read(char *name)
     }
     if (i >= maxDirNum + 2)
     {
-        printf("Ã»ÓĞÕÒµ½Õâ¸öÎÄ¼ş,À´×Ôread\n");
+        printf("Ã»ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½,ï¿½ï¿½ï¿½ï¿½read\n");
         return -1;
     }
     if (cur_dir->directitem[i].property != '0')
     {
-        printf("Ö»ÄÜreadÎÄ¼ş\n");
+        printf("Ö»ï¿½ï¿½readï¿½Ä¼ï¿½\n");
         return -2;
     }
     if (cur_dir->directitem[i].size == 0)
@@ -786,7 +858,7 @@ int del(char *name)
 {
     int i = 0;
     int temp, item;
-    //ÕÒÒ»ÕÒÉ¾³ıµÄ**ÎÄ¼ş**ÊÇ·ñ´æÔÚ
+    //ï¿½ï¿½Ò»ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½**ï¿½Ä¼ï¿½**ï¿½Ç·ï¿½ï¿½ï¿½ï¿½
     for (i = 2; i < maxDirNum + 2; i++)
     {
         if (!strcmp(cur_dir->directitem[i].name, name))
@@ -794,15 +866,16 @@ int del(char *name)
     }
     temp = i;
     if (i >= maxDirNum + 2)
-        return -1; //Ã»ÕÒµ½
+        return -1; //Ã»ï¿½Òµï¿½
     if (cur_dir->directitem[i].property != '0')
-        return -2; //²»ÄÜÉ¾³ıÄ¿Â¼
+        return -2; //ï¿½ï¿½ï¿½ï¿½É¾ï¿½ï¿½Ä¿Â¼
     for (int j = 0; j < maxDirNum; j++)
     {
         if (!strcmp(u_opentable.openitem[j].name, name))
-            return -3; //ÒÑ¾­±»´ò¿ªÁË
+            return -3; //ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     }
     item = cur_dir->directitem[temp].firstdisk;
+    
     while (item != -1)
     {
         int k = fat[item].item;
@@ -810,10 +883,31 @@ int del(char *name)
         fat[item].em_disk = '0';
         item = k;
     }
-    //¿ªÊ¼ÊÍ·Å
+    //ï¿½ï¿½Ê¼ï¿½Í·ï¿½
+    int t;
+    for(t=0;t<7;t++)
+    {
+        if(blank[t]==0)
+        {
+            blank[t]=1;
+            printf("1\n");
+            break;
+        }
+    }
+    if(t<7)
+    {
+        Trash->directitem[t].sign = cur_dir->directitem[temp].sign;
+        Trash->directitem[t].firstdisk = cur_dir->directitem[temp].firstdisk;
+        strcpy(Trash->directitem[t].name, cur_dir->directitem[temp].name);
+        Trash->directitem[t].next = cur_dir->directitem[temp].next;
+        Trash->directitem[t].property = '0';
+        Trash->directitem[t].size = cur_dir->directitem[temp].size;
+        strcpy(nameDir[t],path);
+        strcat(nameDir[t], cur_dir->directitem[temp].name);
+    }
+    printf("%s\n", nameDir[t]);
     cur_dir->directitem[temp].sign = 0;
     cur_dir->directitem[temp].firstdisk = -1;
-    // strcpy(u_opentable.openitem[temp].name, "");
     strcpy(cur_dir->directitem[temp].name, "");
     cur_dir->directitem[temp].next = -1;
     cur_dir->directitem[temp].property = '0';
@@ -827,10 +921,10 @@ int search(char *name)
     search(p, name);
     if (searchpath_num == 0)
     {
-        printf("Ã»ÓĞÕÒµ½Õâ¸öÎÄ¼ş\n");
+        printf("Ã»ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½\n");
         return -1;
     }
-    printf("ÕÒµ½ÁË%d¸öÎÄ¼ş\n", searchpath_num);
+    printf("ï¿½Òµï¿½ï¿½ï¿½%dï¿½ï¿½ï¿½Ä¼ï¿½\n", searchpath_num);
     for (int i = 0; i < searchpath_num; i++)
     {
         printf("%s\n", searchpath[i]);
@@ -841,7 +935,7 @@ void search(struct direct *p, char *name)
 {
     for (int i = 2; i < 7; i++)
     {
-        //ÊÇÄ¿Â¼£¬¶øÇÒÃû×ÖÆ¥Åä£¬¿ÉÊÇµÃ¼ÌĞøÕÒÏÂÈ¥
+        //ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¥ï¿½ä£¬ï¿½ï¿½ï¿½ÇµÃ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¥
         if (!strcmp(p->directitem[i].name, name) && p->directitem[i].property == '1')
         {
             struct direct *temp = p;
@@ -861,13 +955,13 @@ void search(struct direct *p, char *name)
     }
     for (int i = 2; i < 7; i++)
     {
-        //¿ÕµÄ´ÅÅÌ£¬Ìø¹ı
+        //ï¿½ÕµÄ´ï¿½ï¿½Ì£ï¿½ï¿½ï¿½ï¿½ï¿½
         // if (p->directitem[i].name[0] == '.')
         // {
         //     continue;
         // }
 
-        //ÕÒµ½ÁË£¬µ«ÊÇÊÇÎÄ¼ş
+        //ï¿½Òµï¿½ï¿½Ë£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
         if (!strcmp(p->directitem[i].name, name) && p->directitem[i].property == '0')
         {
             struct direct *temp = p;
@@ -883,14 +977,84 @@ void search(struct direct *p, char *name)
             strcat(searchpath[searchpath_num], "Root");
             ++searchpath_num;
         }
-        //ÊÇÄ¿Â¼,µ«ÊÇÃû×Ö²»Æ¥Åä
+        //ï¿½ï¿½Ä¿Â¼,ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö²ï¿½Æ¥ï¿½ï¿½
         if (p->directitem[i].property == '1' && strcmp(p->directitem[i].name, name))
         {
             search((struct direct *)(fdisk + p->directitem[i].firstdisk * diskSize), name);
         }
     }
 }
+int recover(char *name)
+{
+    int i, j,t,item,m,n;
+    char str1[100],str2[100];
+    char* temp;
+    strcpy(str1,name);
+    for(m=1;str1[m]!='\0';m++)
+    {
+        if(str1[m-1]=='>')
+        {
+            for(n=0;str1[n+m]!='>';n++)
+            {
+                str2[n]=str1[m];
+                if(str1[m]=='\0')
+                break;
+            }
+            cd(str1);
+        }   
+    }
+    for (j = 0; j < 7; j++)
+    {
+        if (!strcmp(nameDir[j],str1))
+            break;
+    }
+    if (j >= maxDirNum + 2)
+        return (-1);//å›æ”¶ç«™é‡Œæ²¡æœ‰è¯¥æ–‡ä»¶
+    for (t = 2; t < maxDirNum+2; t++)
+    {
+        if (!strcmp(cur_dir->directitem[t].name, Trash->directitem[j].name))
+            break;
+    }
+    if (t < maxDirNum + 2)
+        return -3;//æœ‰é‡åæ–‡ä»¶
+    for(i=2;i<maxDirNum+2;i++)
+    {
+        if(cur_dir->directitem[i].firstdisk==-1)
+        break;
+    }
+    if(i>=maxDirNum)
+    return -2;//è¯¥ç›®å½•ä¸‹æ–‡ä»¶å·²æ»¡
+    
+    cur_dir->directitem[i].sign = Trash->directitem[j].sign;
+    cur_dir->directitem[i].firstdisk = Trash->directitem[j].firstdisk;
+    strcpy(cur_dir->directitem[i].name, Trash->directitem[j].name);
+    cur_dir->directitem[i].next = Trash->directitem[j].next;
+    cur_dir->directitem[i].property = Trash->directitem[j].property;
+    cur_dir->directitem[i].size = Trash->directitem[j].size;
+    item=cur_dir->directitem[i].firstdisk;
+    fat[item].em_disk='1';
 
+    Trash->directitem[j].sign=0;
+    Trash->directitem[j].firstdisk=-1;
+    Trash->directitem[j].next=-1;
+    strcpy(Trash->directitem[j].name,"");
+    strcpy(nameDir[j],"");
+    Trash->directitem[j].property='0';
+    Trash->directitem[j].size=0;
+    blank[j]=0;
+    return 0;
+	
+}
+void showTrash()
+{
+    int i;
+    for (i = 0; i < 7; i++)
+    {
+        if (blank[i]==1)
+            printf("%d\t%s\t\n", i, nameDir[i]);
+        
+    }
+}
 void exit()
 {
     FILE *fp;
@@ -901,13 +1065,13 @@ void exit()
         printf("Error:\nCannot open file\n");
         return;
     }
-    if (!fwrite(fdisk, totleDiskSize, 1, fp)) /*°ÑĞéÄâ´ÅÅÌ¿Õ¼ä(ÄÚ´æ)ÄÚÈİ¶ÁÈë´ÅÅÌÎÄ¼şdisk.dat */
+    if (!fwrite(fdisk, totleDiskSize, 1, fp)) /*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¿Õ¼ï¿½(ï¿½Ú´ï¿½)ï¿½ï¿½ï¿½İ¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½disk.dat */
     {
         printf("Error:\nFile write error!\n");
     }
     fclose(fp);
 
     free(fdisk);
-    free(path);
+    //free(path);
     return;
 }
