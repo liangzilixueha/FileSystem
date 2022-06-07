@@ -41,7 +41,7 @@ struct trash
     char nameDir[7][100];//回收的路径名
     char blank[7];//该回收位置是否被占用
 };
-int totleDiskSize = 1024 * 1024;                //??????��
+int totleDiskSize = 1024 * 1024;                //整体磁盘块的大小
 int diskSize = 1024;                            //????????��
 int diskNum = totleDiskSize / diskSize;         //????????
 int fatSize = diskNum * sizeof(struct fatitem); //???fat??��
@@ -63,10 +63,9 @@ struct direct *cur_dir; //?????
 struct fatitem *fat;
 //???????
 struct opentable u_opentable;
-struct direct *Trash=(struct direct*)malloc(sizeof(direct));//����վ 
+struct direct *Trash=(struct direct*)malloc(sizeof(direct));//初始化一个垃圾桶
 char nameDir[7][100];
 int blank[7];
-//struct trash *Trash;
 
 void Startup();
 int createDir(char *name);
@@ -97,7 +96,7 @@ int main()
         scanf("%s", command);
         if (!strcmp(command, "mkdir"))
         {
-            //??????
+            //创建目录
             scanf("%s", command);
             int code = createDir(command);
             if (code == 0)
@@ -111,7 +110,7 @@ int main()
         }
         else if (!strcmp(command, "create"))
         {
-            //???????
+            //创建文件
             scanf("%s", command);
             int code = createFile(command);
             if (code == 0)
@@ -193,10 +192,10 @@ int main()
             switch (code)
             {
             case 0:
-                printf("�رճɹ�\n");
+                printf("关闭文件成功\n");
                 break;
             case -1:
-                printf("�Ҳ������ļ�\n");
+                printf("关闭失败\n");
                 break;
             default:
                 break;
@@ -228,7 +227,7 @@ int main()
         {
             for (int i = 0; i < maxDirNum + 2; i++)
             {
-                printf("name:%s,���ԣ�%c\n",
+                printf("name:%s,属性:%c\n",
                        cur_dir->directitem[i].name,
                        cur_dir->directitem[i].property);
             }
@@ -1065,7 +1064,7 @@ void exit()
         printf("Error:\nCannot open file\n");
         return;
     }
-    if (!fwrite(fdisk, totleDiskSize, 1, fp)) /*��������̿ռ�(�ڴ�)���ݶ�������ļ�disk.dat */
+    if (!fwrite(fdisk, totleDiskSize, 1, fp)) /*��������̿ռ�(�ڴ�)���ݶ�������ļ� */
     {
         printf("Error:\nFile write error!\n");
     }
